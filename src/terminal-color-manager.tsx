@@ -1,6 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Palette, Copy, Download, Save, Edit2, Trash2, X } from 'lucide-react';
 
+interface TerminalColors {
+  black: string;
+  red: string;
+  green: string;
+  yellow: string;
+  blue: string;
+  magenta: string;
+  cyan: string;
+  white: string;
+}
+
+interface TerminalScheme {
+  id: number;
+  name: string;
+  accent: string;
+  background: string;
+  foreground: string;
+  details: string;
+  terminal_colors: {
+    normal: TerminalColors;
+    bright: TerminalColors;
+  };
+}
+
 const TerminalColorManager = () => {
   const defaultSchemes = [
     {
@@ -35,8 +59,8 @@ const TerminalColorManager = () => {
     }
   ];
 
-  const [schemes, setSchemes] = useState(defaultSchemes);
-  const [activeScheme, setActiveScheme] = useState(defaultSchemes[0]);
+  const [schemes, setSchemes] = useState<TerminalScheme[]>(defaultSchemes);
+  const [activeScheme, setActiveScheme] = useState<TerminalScheme>(defaultSchemes[0]);
   const [editMode, setEditMode] = useState(false);
   const [previewApp, setPreviewApp] = useState('rainbow');
   const [isSaving, setIsSaving] = useState(false);
@@ -47,11 +71,11 @@ const TerminalColorManager = () => {
     loadSchemes();
   }, []);
 
-  const loadSchemes = async () => {
+  const loadSchemes = () => {
     try {
-      const result = await window.storage.get('terminal-schemes');
-      if (result) {
-        const loaded = JSON.parse(result.value);
+      const stored = localStorage.getItem('terminal-schemes');
+      if (stored) {
+        const loaded = JSON.parse(stored);
         setSchemes(loaded);
         setActiveScheme(loaded[0]);
       }
@@ -60,10 +84,10 @@ const TerminalColorManager = () => {
     }
   };
 
-  const saveSchemes = async () => {
+  const saveSchemes = () => {
     setIsSaving(true);
     try {
-      await window.storage.set('terminal-schemes', JSON.stringify(schemes));
+      localStorage.setItem('terminal-schemes', JSON.stringify(schemes));
       alert('Конфигурации сохранены!');
     } catch (error) {
       alert('Ошибка сохранения');
@@ -71,10 +95,10 @@ const TerminalColorManager = () => {
     setIsSaving(false);
   };
 
-  const updateColor = (type, brightness, colorName, value) => {
+  const updateColor = (type: 'main' | 'terminal', brightness: string | null, colorName: string, value: string) => {
     const updated = JSON.parse(JSON.stringify(activeScheme));
     if (type === 'terminal') {
-      updated.terminal_colors[brightness][colorName] = value;
+      updated.terminal_colors[brightness!][colorName] = value;
     } else {
       updated[colorName] = value;
     }
@@ -126,7 +150,7 @@ const TerminalColorManager = () => {
     setEditMode(true);
   };
 
-  const deleteScheme = (id) => {
+  const deleteScheme = (id: number) => {
     if (schemes.length === 1) {
       alert('Нельзя удалить последнюю схему');
       return;
@@ -140,7 +164,7 @@ const TerminalColorManager = () => {
     }
   };
 
-  const generateYAML = (scheme) => {
+  const generateYAML = (scheme: TerminalScheme) => {
     return `# ${scheme.name}
 accent: '${scheme.accent}'
 background: '${scheme.background}'
@@ -167,12 +191,12 @@ terminal_colors:
     white:   '${scheme.terminal_colors.bright.white}'`;
   };
 
-  const copyToClipboard = (scheme) => {
+  const copyToClipboard = (scheme: TerminalScheme) => {
     navigator.clipboard.writeText(generateYAML(scheme));
     alert('Конфигурация скопирована!');
   };
 
-  const downloadYAML = (scheme) => {
+  const downloadYAML = (scheme: TerminalScheme) => {
     const yaml = generateYAML(scheme);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
@@ -183,7 +207,7 @@ terminal_colors:
     URL.revokeObjectURL(url);
   };
 
-  const ColorEditor = ({ label, value, onChange, disabled }) => (
+  const ColorEditor = ({ label, value, onChange, disabled }: { label: string; value: string; onChange: (v: string) => void; disabled: boolean }) => (
     <div className="flex items-center gap-2">
       <input
         type="color"
@@ -536,19 +560,19 @@ terminal_colors:
                 <ColorEditor
                   label="Фон"
                   value={activeScheme.background}
-                  onChange={(v) => updateColor('main', null, 'background', v)}
+                  onChange={(v: string) => updateColor('main', null, 'background', v)}
                   disabled={!editMode}
                 />
                 <ColorEditor
                   label="Текст"
                   value={activeScheme.foreground}
-                  onChange={(v) => updateColor('main', null, 'foreground', v)}
+                  onChange={(v: string) => updateColor('main', null, 'foreground', v)}
                   disabled={!editMode}
                 />
                 <ColorEditor
                   label="Акцент"
                   value={activeScheme.accent}
-                  onChange={(v) => updateColor('main', null, 'accent', v)}
+                  onChange={(v: string) => updateColor('main', null, 'accent', v)}
                   disabled={!editMode}
                 />
               </div>
@@ -562,7 +586,7 @@ terminal_colors:
                     key={name}
                     label={name}
                     value={color}
-                    onChange={(v) => updateColor('terminal', 'normal', name, v)}
+                    onChange={(v: string) => updateColor('terminal', 'normal', name, v)}
                     disabled={!editMode}
                   />
                 ))}
@@ -578,7 +602,7 @@ terminal_colors:
                   key={name}
                   label={name}
                   value={color}
-                  onChange={(v) => updateColor('terminal', 'bright', name, v)}
+                  onChange={(v: string) => updateColor('terminal', 'bright', name, v)}
                   disabled={!editMode}
                 />
               ))}
